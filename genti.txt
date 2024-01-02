@@ -1,0 +1,1 @@
+[2023-09-19T02:50:01+02:00] Running scheduled command: '/usr/local/bin/php' 'artisan' disable-month-expense-reset > '/dev/null' 2>&1

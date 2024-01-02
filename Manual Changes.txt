@@ -1,0 +1,14 @@
+These changes must be made in migrations:
+
+- sales:
+1. sold_price           => double (20,2) nullable()->default(0)
+2. purchased_price 	    => double (20,2) nullable()->default(0)
+3. profit               => double (20,2) nullable()->default(0)
+4. debt_price_unpaid    => double (20,2) nullable()->default(0)
+5. debt_price           => double (20,2) nullable()->default(0)
+
+
+- employee_attach_sales
+1. debt_price           => double(20,2) nullable()->default(0)
+2. debt_price_unpaid 	=> double(20,2) nullable()->default(0)
+

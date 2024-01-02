@@ -1,0 +1,250 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Expense;
+use App\Models\Sale;
+use App\Models\SaleReport;
+use App\Models\OwnerTransaction;
+use App\Models\CompanyFund;
+use DB;
+
+class ExpenseController extends Controller
+{
+    //
+       /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function addExpense(Request $request)
+    {   
+        Expense::create([
+            "payment_type" => $request['expense']["payment_type"],
+            "payment_price" => $request['expense']["payment_price"],
+            "user_id"       => auth()->user()->id
+        ]);
+
+        return response()->json("success");        
+
+        // return response()->json("success");
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function fetchExpense($id)
+    {
+        //
+        $service = Service::where('id', $id)->first();
+        return $service;        
+    }
+
+    public function fetchExpenses(Request $request)
+    {
+        if (auth()->user() && auth()->user()->can('viewAny', User::class)) {
+            $perPage = $request['perPage'];
+            $page = $request['page'];
+            $sortBy = $request['sortBy'];
+            $sortDesc = $request['sortDesc']; 
+
+            $q = $request['q'];
+
+            $expenses = Expense::with('user')
+                    ->where(function ($query) use ($q) {
+                        $query->whereRaw('payment_type like ?', ['%' . $q . '%']);             
+                    })
+                    ->where('closed', 0)             
+                    ->orderBy($sortBy, $sortDesc ? 'desc' : 'asc')
+                    ->paginate($perPage, ['*'], 'page', $page);            
+        } else {
+            $perPage = $request['perPage'];
+            $page = $request['page'];
+            $sortBy = $request['sortBy'];
+            $sortDesc = $request['sortDesc']; 
+
+            $q = $request['q'];
+
+            $expenses = Expense::with('user')
+                    ->where(function ($query) use ($q) {
+                        $query->whereRaw('payment_type like ?', ['%' . $q . '%']);             
+                    })
+                    ->where('closed', 0) 
+                    ->where('user_id', auth()->user()->id)            
+                    ->orderBy($sortBy, $sortDesc ? 'desc' : 'asc')
+                    ->paginate($perPage, ['*'], 'page', $page);  
+
+
+        }
+
+        $total_rows = $expenses->total();
+        $expenses = $expenses->items();
+
+        return response()->json([
+            "expenses" => $expenses,
+            "total" => $total_rows,
+        ]);
+    }
+
+    public function fetchAllExpenses()
+    {
+        $expenses = Expense::all()->map(function($expense) {
+            return [
+                'label' => $expense->name,
+                'value' => $expense->id,
+            ];
+        });
+
+        return $expenses;
+    }
+
+    public function deleteExpense($id) {
+        $expense = Expense::findOrFail($id);
+        $expense->delete();
+
+        return response()->json(['message' => 'Expense deleted successfully']);
+    }
+
+    public function fetchCurrentMonthExpensesPriceReport() {
+        $prevMonth = date('m', strtotime('previous month'));
+        $currentMonth = date('m'); 
+        $currentYear = date('Y');
+        
+        $currentMexpenses = Expense::whereYear('created_at', $currentYear)->whereMonth('created_at', $currentMonth)->where('closed', 0)->sum('payment_price');  
+        $prevMexpenses = Expense::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('closed', 0)->sum('payment_price');  
+        $total_euro = $currentMexpenses + $prevMexpenses;
+        return response()->json($total_euro);
+    }
+
+   // public function closeThisMonth(Request $r) { 
+     if($expense_prev_month > 0 && $expense_prev_month_not_closed > 0) { 
+        $currentMonth = date('m'); 
+        $prevMonth = date('m', strtotime('previous month')); // previous Month
+        $currentYear = date('Y');
+
+       
+        $expense_prev_month = Expense::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('closed', 1)->get()->count(); // closed
+        $expense_prev_month_not_closed = Expense::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('closed', 0)->get()->count(); //not closed
+        $expense_current_month = Expense::whereYear('created_at', $currentYear)->whereMonth('created_at', $currentMonth)->where('closed', 1)->get()->count();
+
+	if($expense_prev_month > 0 && $expense_prev_month_not_closed <= 0) {
+		$expense = 0;
+	} else {
+        	$expense = $expense_prev_month + $expense_current_month;
+        }
+        
+
+        if($expense>=1) {
+            return response()->json("Shpenzimet jane mbyllur, prisni deri me daten 1 te muajit ne vijim!");
+        } else {
+            $expensePrevM = Expense::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('closed', 0);
+            $expenseCurrentM = Expense::whereYear('created_at', $currentYear)->whereMonth('created_at', $currentMonth)->where('closed', 0)->select('payment_price');
+
+            $expense = $expensePrevM->union($expenseCurrentM);
+
+            $expense_total_euro = $expense->sum('payment_price');
+
+      
+            Expense::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('closed', 0)->update([
+                'closed' => 1
+            ]);
+
+            Expense::whereYear('created_at', $currentYear)->whereMonth('created_at', $currentMonth)->where('closed', 0)->update([
+                'closed' => 1
+            ]);
+
+            // generate reports
+            $total_euro = Sale::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('main_currency', 'euro')->where(function ($q) {
+                $q->where('status', 1)
+                ->orWhere('status', 2); 
+            })->sum('sold_price');  
+            $total_usd = Sale::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('main_currency', 'usd')->where(function ($q) {
+                $q->where('status', 1)
+                ->orWhere('status', 2); 
+            })->sum('sold_price');
+            $total_chf = Sale::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('main_currency', 'chf')->where(function ($q) {
+                $q->where('status', 1)
+                ->orWhere('status', 2); 
+            })->sum('sold_price');
+
+            $profit_euro = Sale::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('main_currency', 'euro')->where(function ($q) {
+                $q->where('status', 1)
+                ->orWhere('status', 2); 
+            })->sum('profit');
+            $profit_usd = Sale::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('main_currency', 'usd')->where(function ($q) {
+                $q->where('status', 1)
+                ->orWhere('status', 2); 
+            })->sum('profit');
+            $profit_chf = Sale::whereYear('created_at', $currentYear)->whereMonth('created_at', $prevMonth)->where('main_currency', 'chf')->where(function ($q) {
+                $q->where('status', 1)
+                ->orWhere('status', 2); 
+            })->sum('profit');
+
+            $total_sales_euro = $r['expense']['total_sales_euro'];
+            $total_profit_euro = $r['expense']['total_profit_euro'];
+
+            SaleReport::create([
+                'sales_euro'        => $total_euro,
+                'sales_usd'         => $total_usd,
+                'sales_chf'         => $total_chf,
+                'profit_euro'       => $profit_euro,
+                'profit_usd'        => $profit_usd,
+                'profit_chf'        => $profit_chf,
+                'total_sales_euro'  => $total_sales_euro,
+                'total_profit_euro' => $total_profit_euro,
+                'total_expenses_euro' => $expense_total_euro
+            ]);
+
+            // generate transaction
+            $transaction = OwnerTransaction::create([
+                'amount' => $total_profit_euro - $expense_total_euro,
+                'user_id' => auth()->user()->id
+            ]);
+
+            // generate funds 
+            $current_balance = CompanyFund::latest()->first()->current_balance;
+            
+            CompanyFund::create([
+                'before_balance' => $current_balance,
+                'current_balance' => $current_balance + $transaction->amount
+            ]);
+            
+            return response()->json("success");
+        }
+
+    }
+    public function fetchCurrentBilance() {
+        if(auth()->user()->role == 1) {
+            $current_balance = CompanyFund::latest()->first()->current_balance;
+        
+            return response()->json($current_balance);   
+        }
+    }
+
+    public function withdrawMoney(Request $request) {
+        $current_balance = CompanyFund::latest()->first()->current_balance;
+        if($request['withdraw']['withdraw_amount'] > $current_balance) {
+            return response()->json("Nuk keni mjete te mjaftueshme per terheqje!");
+        } else {
+            $transaction = OwnerTransaction::create([
+                'amount' => $request['withdraw']['withdraw_amount'],
+                'user_id' => auth()->user()->id,
+                'type' => 'terheqje'
+            ]);
+    
+            $current_balance = CompanyFund::latest()->first()->current_balance;
+            
+            CompanyFund::create([
+                'before_balance' => $current_balance,
+                'current_balance' => $current_balance - $transaction->amount
+            ]);
+            return response()->json("success");
+        }        
+    }
+
+}
