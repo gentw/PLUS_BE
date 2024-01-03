@@ -22,4 +22,32 @@ class StockProductController extends Controller
         return response()->json("success");   
     }
 
+    public function update(Request $request)
+    {
+        StockProduct::where('id', $request['stock']['id'])->update([
+            "barcode"   => $request['stock']["barcode"],
+            "emri"      => $request['stock']["emri"],
+            "njesia"    => $request['stock']["njesia"],
+            "sasia"     => $request['stock']["sasia"],
+            "cmimi"     => $request['stock']["cmimi"],
+            "vlera"     => $request['stock']["sasia"] * $request['stock']["cmimi"]
+        ]);
+
+        return response()->json("success");   
+    }
+
+
+    public function fetchStockProduct($id)
+    {
+        $stock = StockProduct::where('id', $id)->first();
+
+        return response()->json($stock);   
+    }
+
+
+
+    public function fetchTotalOfVleraSum() {
+        return StockProduct::sum('vlera');
+    }
+
 }

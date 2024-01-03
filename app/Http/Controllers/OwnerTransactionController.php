@@ -20,7 +20,10 @@ class OwnerTransactionController extends Controller
         $q = $request['q'];
         
         
-        $transactions = StockProduct::orderBy($sortBy, $sortDesc ? 'desc' : 'asc')
+        $transactions = StockProduct::where(function ($query) use ($q) {
+            $query->whereRaw('stock_products.emri like ?', ['%' . $q . '%'])
+            ->orWhereRaw('stock_products.barcode like ?', ['%' . $q . '%']);              
+        })->orderBy($sortBy, $sortDesc ? 'desc' : 'asc')
             ->paginate($perPage, ['*'], 'page', $page);
 
         $total_rows = $transactions->total();
@@ -31,6 +34,7 @@ class OwnerTransactionController extends Controller
             "total" => $total_rows,
         ]);
     }
+
 
     public function deleteTransaction($id) {
         $expense = StockProduct::findOrFail($id);

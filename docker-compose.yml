@@ -2,7 +2,7 @@ version: '3.7'
 services:
 
   #Bluesky App
-  app:
+  appi:
     build:
       context: ./
       dockerfile: Dockerfile
@@ -20,7 +20,7 @@ services:
       - mynet
 
 #Nginx Service
-  nginx:
+  nginxi:
     build:
       context: ./
       dockerfile: ./nginx2/Dockerfile
@@ -38,13 +38,13 @@ services:
       - mynet
 
 #MySQL Service
-  db:
+  dbi:
     image: mysql:5.7
     container_name: db
     restart: unless-stopped
     tty: true
     ports:
-      - "3306:3306"
+      - "3307:3307"
     environment:
       MYSQL_DATABASE: blueskydb
       MYSQL_USER: bluesky
@@ -56,7 +56,7 @@ services:
       - mynet
 
 #phpmyadmin
-  phpmyadmin:
+  phpmyadmini:
     image: phpmyadmin/phpmyadmin:latest
     restart: always
     environment:
@@ -64,7 +64,7 @@ services:
       PMA_USER: bluesky
       PMA_PASSWORD: fr33d0m
     ports:
-      - "8082:80"
+      - "8083:80"
     networks:
       - mynet
 

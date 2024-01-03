@@ -14,6 +14,10 @@ use App\Models\Sale;
 */
 Route::middleware(['web'])->group(function () {
     Route::post('/api/addStockProduct', [App\Http\Controllers\StockProductController::class, 'store']);
+    Route::post('/api/updateStockProduct/', [App\Http\Controllers\StockProductController::class, 'update']);
+    Route::get('/api/fetchTotalOfVleraSum', [App\Http\Controllers\StockProductController::class, 'fetchTotalOfVleraSum']);
+    Route::get('/api/fetchStockProduct/{id}', [App\Http\Controllers\StockProductController::class, 'fetchStockProduct']);
+    
 });
 
 Route::get('/', function () {

@@ -19,11 +19,14 @@ export default function useTransactionsList() {
     { key: 'njesia', label: 'Njesia', sortable: true },
     { key: 'sasia', label: 'Sasia'},
     { key: 'cmimi', label: 'Cmimmi'},
+    { key: 'vlera', label: 'Vlera'},
     { key: 'created_at', label: 'Data' },
     { key: 'actions', label: 'Actions' },
   ]
   const perPage = ref(10)
   const totalTransactions = ref(0)
+  const stockProduct = ref({});
+  const vleraSum = ref(0);
   const currentPage = ref(1)
   const perPageOptions = [10, 25, 50, 100]
   const searchQuery = ref('')
@@ -88,6 +91,18 @@ export default function useTransactionsList() {
     });
   }
 
+  const fetchTotalOfVleraSum = () => {
+    store.dispatch('app-transaction/fetchTotalOfVleraSum').then((response) => {
+      vleraSum.value = response.data;
+    });
+  }
+
+  const fetchProduct = (id) => {
+    store.dispatch('app-transaction/fetchProduct', id).then((response) => {
+      stockProduct.value = response.data;
+    });
+  }
+
   // *===============================================---*
   // *--------- UI ---------------------------------------*
   // *===============================================---*
@@ -100,6 +115,8 @@ export default function useTransactionsList() {
     perPage,
     currentPage,
     totalTransactions,
+    stockProduct,
+    vleraSum,
     dataMeta,
     perPageOptions,
     searchQuery,
@@ -107,6 +124,8 @@ export default function useTransactionsList() {
     isSortDirDesc,
     refTransactionListTable,
     refetchData,
-    deleteTransaction
+    deleteTransaction,
+    fetchProduct,
+    fetchTotalOfVleraSum
   }
 }

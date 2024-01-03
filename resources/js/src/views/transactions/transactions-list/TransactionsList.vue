@@ -2,6 +2,13 @@
 
   <div>
 
+     <transactions-list-edit
+      :is-transactions-list-edit-sidebar-active.sync="isTransactionsListEditSidebarActive"
+      :expense-datas="stockProduct"
+      @refetch-data="refetchData"
+      @fetch-total-of-vlera-sum="fetchTotalOfVleraSum"
+    />
+
     <!-- Filters
     <users-list-filters
       :role-filter.sync="roleFilter"
@@ -11,6 +18,7 @@
       :plan-options="planOptions"
       :status-options="statusOptions"
     /> -->
+    <div style="background: red; font-weight: bold; font-size: 20px; padding: 10px; margin-bottom: 20px; color: #fff;">Totali: {{vleraSum}} Euro</div>
 
     <!-- Table Container Card -->
     <b-card
@@ -128,6 +136,16 @@
           </b-media>
         </template>
 
+         <template #cell(vlera)="data">
+          <b-media vertical-align="center">           
+              <span v-if="data.item.vlera">
+                <span>
+               {{ data.item.vlera }} Euro
+                </span>
+              </span>
+          </b-media>
+        </template>
+
         
       
         <!-- Column: Actions -->
@@ -146,10 +164,10 @@
               />
             </template>
 
-            <!-- <b-dropdown-item :to="{ name: 'apps-transactions-edit', params: { id: data.item.id } }">
+            <b-dropdown-item @click="showEditSidebar(data.item.id)">
               <feather-icon icon="EditIcon" />
               <span class="align-middle ml-50">Ndrysho</span>
-            </b-dropdown-item> -->
+            </b-dropdown-item> 
 
             <b-dropdown-item @click="deleteTransaction(data.item.id)">
               <feather-icon icon="TrashIcon" />
@@ -157,6 +175,8 @@
             </b-dropdown-item>
           </b-dropdown>
         </template>
+
+        
 
       </b-table>
       <div class="mx-2 mb-2">
@@ -230,6 +250,7 @@ import Swal from 'sweetalert2'
 import { ref, onUnmounted, onMounted } from '@vue/composition-api'
 import { avatarText } from '@core/utils/filter'
 // import UsersListFilters from './UsersListFilters.vue'
+import TransactionsListEdit from './TransactionsListEdit.vue'
 import useTransactionsList from './useTransactionsList'
 import transactionStoreModule from '../transactionStoreModule'
 
@@ -237,7 +258,7 @@ import transactionStoreModule from '../transactionStoreModule'
 export default {
   components: {
     // UsersListFilters,
-    
+    TransactionsListEdit,
     BCard,
     BRow,
     BCol,
@@ -265,6 +286,11 @@ export default {
       if (store.hasModule(TRANSACTION_APP_STORE_MODULE_NAME)) store.unregisterModule(TRANSACTION_APP_STORE_MODULE_NAME)
     })
 
+    onMounted(() => {
+      fetchTotalOfVleraSum();
+    })
+
+    const isTransactionsListEditSidebarActive = ref(false);
        
     const {
       fetchTransactions,
@@ -280,10 +306,20 @@ export default {
       refTransactionListTable,
       deleteTransaction,
       refetchData,
+      fetchProduct,
+      stockProduct,
+      fetchTotalOfVleraSum,
+      vleraSum
     
 
     
-    } = useTransactionsList()
+    } = useTransactionsList();
+
+    const showEditSidebar = ((id) => {
+      console.log(id);
+      isTransactionsListEditSidebarActive.value = true;
+      fetchProduct(id);
+    });
 
     return {
       // Sidebar
@@ -299,10 +335,15 @@ export default {
       isSortDirDesc,
       refTransactionListTable,
       deleteTransaction,
+      fetchProduct,
       refetchData,
-
+      showEditSidebar,
+      isTransactionsListEditSidebarActive,
       // Filter
       avatarText, 
+      stockProduct,
+      vleraSum,
+      fetchTotalOfVleraSum
     }
   },
 }
